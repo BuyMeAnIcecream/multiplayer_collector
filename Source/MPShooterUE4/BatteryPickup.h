@@ -13,10 +13,14 @@ UCLASS()
 class MPSHOOTERUE4_API ABatteryPickup : public APickup
 {
 	GENERATED_BODY()
-	
+
 public:
+	//set default vals to instance of a class
 	ABatteryPickup();
+
+	//server side handling
+	UFUNCTION(BlueprintAuthorityOnly, Category = "Pickup")
+	void PickedUpBy(APawn* Pawn) override;
 	
-	//override base version
-	void WasCollected_Implementation() override;
+
 };

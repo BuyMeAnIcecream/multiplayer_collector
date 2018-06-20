@@ -2,9 +2,11 @@
 
 #pragma once
 
+
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "MPShooterUE4Character.generated.h"
+
 
 UCLASS(config=Game)
 class AMPShooterUE4Character : public ACharacter
@@ -67,6 +69,14 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+	//called on key collect pressed
+	UFUNCTION(BlueprintCallable, Category = "Pickups")
+	void CollectPickups();
+
+	//process collection on serv
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerCollectPickups();
 
 public:
 	/** Returns CameraBoom subobject **/

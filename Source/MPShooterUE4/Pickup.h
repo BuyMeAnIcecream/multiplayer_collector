@@ -25,16 +25,29 @@ public:
 	//Required network scuffolding
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UFUNCTION(BlueprintCallable, Category = "Pickup")
+	UFUNCTION(BlueprintNativeEvent, Category = "Pickup")
 	void WasCollected();
 	virtual void WasCollected_Implementation();
 
+	//server side handling
+	UFUNCTION(BlueprintAuthorityOnly, Category = "Pickup")
+	virtual void PickedUpBy(APawn* Pawn);
+	void ClientOnPickedUpBy_Implementation(APawn * Pawn);
+
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
+	APawn* PickupInstigator;
+	
 	//can be used
 	UPROPERTY(ReplicatedUsing = OnRep_IsActive)
 	bool bIsActive;
 
 	UFUNCTION()
 	virtual void OnRep_IsActive();
+
+private:
+	//client handling
+	UFUNCTION(NetMulticast, Unreliable)
+	void ClientOnPickedUpBy(APawn* Pawn);
 	
 };

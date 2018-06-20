@@ -1,4 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
+#pragma once
 
 #include "BatteryPickup.h"
 #include "Components/StaticMeshComponent.h"
@@ -12,11 +13,13 @@ ABatteryPickup::ABatteryPickup() {
 
 }
 
-void ABatteryPickup::WasCollected_Implementation() {
 
-	//allow parent class to handle FIRST
-	Super::WasCollected_Implementation();
-	//Destroy the battery
-	Destroy();
-
+void ABatteryPickup::PickedUpBy(APawn * Pawn)
+{
+	Super::PickedUpBy(Pawn);
+	if (Role == ROLE_Authority)
+	{
+		//delay deletion to give client time to play vfx etc
+		SetLifeSpan(2.0f);
+	}
 }

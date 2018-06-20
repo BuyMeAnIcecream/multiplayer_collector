@@ -2,13 +2,16 @@
 
 #include "Pickup.h"
 #include "Net/UnrealNetwork.h"
-
+#include "Components/StaticMeshComponent.h"
 APickup::APickup() {
 
 	//enabling replication
 	bReplicates = true;
 
 	PrimaryActorTick.bCanEverTick = false;
+
+	// stat component's overlap is off by default
+	GetStaticMeshComponent()->bGenerateOverlapEvents = true;
 
 	if (Role == ROLE_Authority) {
 		bIsActive = true;
@@ -38,13 +41,30 @@ void APickup::OnRep_IsActive()
 	
 }
 
-void APickup::WasCollected()
-{
-
-}
 
 
 void APickup::WasCollected_Implementation()
 {
 	UE_LOG(LogClass, Log, TEXT("APickup::WasCollected_Implementation() %s"), *GetName());
+}
+
+
+
+
+void APickup::PickedUpBy(APawn* Pawn)
+{
+	if (Role == ROLE_Authority)
+	{
+		PickupInstigator = Pawn;
+		//Notify clients of the picked up action
+		ClientOnPickedUpBy(Pawn);
+	}
+}
+
+void APickup::ClientOnPickedUpBy_Implementation(APawn* Pawn)
+{
+	//store instigator
+	PickupInstigator = Pawn;
+	//fire bp native event, which can't be replicated
+	WasCollected();
 }

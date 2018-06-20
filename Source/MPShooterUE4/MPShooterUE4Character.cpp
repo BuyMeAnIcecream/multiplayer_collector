@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Pickup.h"
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterUE4Character
 
@@ -69,27 +70,30 @@ void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 void AMPShooterUE4Character::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
-	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+check(PlayerInputComponent);
+PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &AMPShooterUE4Character::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AMPShooterUE4Character::MoveRight);
+PlayerInputComponent->BindAxis("MoveForward", this, &AMPShooterUE4Character::MoveForward);
+PlayerInputComponent->BindAxis("MoveRight", this, &AMPShooterUE4Character::MoveRight);
 
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("TurnRate", this, &AMPShooterUE4Character::TurnAtRate);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &AMPShooterUE4Character::LookUpAtRate);
+// We have 2 versions of the rotation bindings to handle different kinds of devices differently
+// "turn" handles devices that provide an absolute delta, such as a mouse.
+// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
+PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+PlayerInputComponent->BindAxis("TurnRate", this, &AMPShooterUE4Character::TurnAtRate);
+PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+PlayerInputComponent->BindAxis("LookUpRate", this, &AMPShooterUE4Character::LookUpAtRate);
 
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMPShooterUE4Character::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AMPShooterUE4Character::TouchStopped);
+// handle touch devices
+PlayerInputComponent->BindTouch(IE_Pressed, this, &AMPShooterUE4Character::TouchStarted);
+PlayerInputComponent->BindTouch(IE_Released, this, &AMPShooterUE4Character::TouchStopped);
 
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMPShooterUE4Character::OnResetVR);
+// VR headset functionality
+PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMPShooterUE4Character::OnResetVR);
+
+//handle pickups
+PlayerInputComponent->BindAction("CollectPickups", IE_Pressed, this, &AMPShooterUE4Character::CollectPickups);
 }
 
 
@@ -100,12 +104,12 @@ void AMPShooterUE4Character::OnResetVR()
 
 void AMPShooterUE4Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		Jump();
+	Jump();
 }
 
 void AMPShooterUE4Character::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		StopJumping();
+	StopJumping();
 }
 
 void AMPShooterUE4Character::TurnAtRate(float Rate)
@@ -136,15 +140,48 @@ void AMPShooterUE4Character::MoveForward(float Value)
 
 void AMPShooterUE4Character::MoveRight(float Value)
 {
-	if ( (Controller != NULL) && (Value != 0.0f) )
+	if ((Controller != NULL) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-	
+
 		// get right vector 
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
+	}
+}
+
+void AMPShooterUE4Character::CollectPickups()
+{
+	//ask server to collect dat
+	ServerCollectPickups();
+}
+
+bool AMPShooterUE4Character::ServerCollectPickups_Validate()
+{
+	return true;
+}
+
+void AMPShooterUE4Character::ServerCollectPickups_Implementation()
+{
+	if (Role == ROLE_Authority)
+	{
+		//get all overlapping actors
+		TArray<AActor*> CollectedActors;
+		CollectionSphere->GetOverlappingActors(CollectedActors);
+		//check if they are pickups
+		for (int i = 0; i < CollectedActors.Num(); i++)
+		{
+			APickup* const TestPickup = Cast<APickup>(CollectedActors[i]);
+			if (TestPickup != NULL && !TestPickup->IsPendingKill() && TestPickup->IsActive()) 
+			{
+				TestPickup->PickedUpBy(this);
+				TestPickup->SetActive(false);
+			}	
+		}
+
+			//collect pickup and deactivate it
 	}
 }
