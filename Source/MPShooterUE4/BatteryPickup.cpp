@@ -11,8 +11,16 @@ ABatteryPickup::ABatteryPickup() {
 	GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
 	GetStaticMeshComponent()->SetSimulatePhysics(true);
 
+	//set base val of batteryPower
+	BatteryPower = 200.0f;
 }
 
+
+void ABatteryPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ABatteryPickup, BatteryPower);
+}
 
 void ABatteryPickup::PickedUpBy(APawn * Pawn)
 {
@@ -22,4 +30,9 @@ void ABatteryPickup::PickedUpBy(APawn * Pawn)
 		//delay deletion to give client time to play vfx etc
 		SetLifeSpan(2.0f);
 	}
+}
+
+float ABatteryPickup::GetPower()
+{
+	return BatteryPower;
 }

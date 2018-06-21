@@ -36,6 +36,19 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UFUNCTION(BlueprintPure, Category = "Power")
+	float GetInitialPower();
+
+	UFUNCTION(BlueprintPure, Category = "Power")
+	float GetCurrentPower();
+
+	/**
+	*Updates power lvl
+	* @param DeltaPower is the amount that is added to CurrentPower
+	*/
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Power")
+	void UpdatePower(float DeltaPower);
+
 protected:
 
 	/** Resets HMD orientation in VR. */
@@ -78,6 +91,10 @@ protected:
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerCollectPickups();
 
+	//starting pwrlevel
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
+	float InitialPower;
+	
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -88,5 +105,8 @@ public:
 private:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Battery", Meta = (AllowPrivateAccess = "true"))
 	float CollectionSphereRadius;
+
+	UPROPERTY(Replicated, VisibleAnywhere, Category = "Power")
+	float CurrentPower;
 };
 

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
+#include "Net/UnrealNetwork.h"
+#include "Components/StaticMeshComponent.h"
 #include "Pickup.generated.h"
 
 /**

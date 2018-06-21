@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Pickup.h"
-#include "Net/UnrealNetwork.h"
-#include "Components/StaticMeshComponent.h"
+
+
 APickup::APickup() {
 
 	//enabling replication

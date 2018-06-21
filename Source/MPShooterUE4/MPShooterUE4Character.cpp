@@ -10,7 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "Pickup.h"
+#include "BatteryPickup.h"
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterUE4Character
 
@@ -56,12 +56,18 @@ AMPShooterUE4Character::AMPShooterUE4Character()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+
+	//base vals for char power
+	InitialPower = 2000.0f;
+	CurrentPower = InitialPower;
 }
 
 void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMPShooterUE4Character, CollectionSphereRadius);
+	DOREPLIFETIME(AMPShooterUE4Character, InitialPower);
+	DOREPLIFETIME(AMPShooterUE4Character, CurrentPower);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,6 +102,24 @@ PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMPShooterUE4Char
 PlayerInputComponent->BindAction("CollectPickups", IE_Pressed, this, &AMPShooterUE4Character::CollectPickups);
 }
 
+
+float AMPShooterUE4Character::GetInitialPower()
+{
+	return InitialPower;
+}
+
+float AMPShooterUE4Character::GetCurrentPower()
+{
+	return CurrentPower;
+}
+
+void AMPShooterUE4Character::UpdatePower(float DeltaPower)
+{
+	if (Role == ROLE_Authority)
+	{
+		CurrentPower += DeltaPower;
+	}
+}
 
 void AMPShooterUE4Character::OnResetVR()
 {
@@ -168,6 +192,8 @@ void AMPShooterUE4Character::ServerCollectPickups_Implementation()
 {
 	if (Role == ROLE_Authority)
 	{
+		//track total power found in batteries
+		float TotalPower = 0.0f;
 		//get all overlapping actors
 		TArray<AActor*> CollectedActors;
 		CollectionSphere->GetOverlappingActors(CollectedActors);
@@ -177,11 +203,21 @@ void AMPShooterUE4Character::ServerCollectPickups_Implementation()
 			APickup* const TestPickup = Cast<APickup>(CollectedActors[i]);
 			if (TestPickup != NULL && !TestPickup->IsPendingKill() && TestPickup->IsActive()) 
 			{
+				//add power if battery was found
+				if (ABatteryPickup* const TestBattery = Cast<ABatteryPickup>(TestPickup))
+				{
+					TotalPower += TestBattery->GetPower();
+				}
+				//collect and deactivat
 				TestPickup->PickedUpBy(this);
 				TestPickup->SetActive(false);
 			}	
 		}
 
-			//collect pickup and deactivate it
+		//change the character power based on what we pickedup
+		if (!FMath::IsNearlyZero(TotalPower, 0.01f))
+		{
+			UpdatePower(TotalPower);
+		}
 	}
 }
