@@ -60,6 +60,10 @@ AMPShooterUE4Character::AMPShooterUE4Character()
 	//base vals for char power
 	InitialPower = 2000.0f;
 	CurrentPower = InitialPower;
+
+	//base values for controlling movement speed
+	BaseSpeed = 10.0f; //epic's default
+	SpeedFactor = 0.75f;
 }
 
 void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -118,6 +122,11 @@ void AMPShooterUE4Character::UpdatePower(float DeltaPower)
 	if (Role == ROLE_Authority)
 	{
 		CurrentPower += DeltaPower;
+		//set movement speed based on power level
+		GetCharacterMovement()->MaxWalkSpeed = BaseSpeed + SpeedFactor * CurrentPower;
+
+		//fake the rep notify (listen server doesn't get the repnotify automatically
+		OnRep_CurrentPower();
 	}
 }
 
@@ -181,6 +190,11 @@ void AMPShooterUE4Character::CollectPickups()
 {
 	//ask server to collect dat
 	ServerCollectPickups();
+}
+
+void AMPShooterUE4Character::OnRep_CurrentPower()
+{
+	PowerChangeEffect();
 }
 
 bool AMPShooterUE4Character::ServerCollectPickups_Validate()

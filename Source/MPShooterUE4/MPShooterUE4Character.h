@@ -94,7 +94,19 @@ protected:
 	//starting pwrlevel
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
 	float InitialPower;
-	
+
+	//spped at 0 power
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
+	float BaseSpeed;
+
+	//multiplier fpr controlling speed depending on power level
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
+	float SpeedFactor;
+
+	//update character visuals based on current power level
+	UFUNCTION(BlueprintImplementableEvent, Category = "Power")
+	void PowerChangeEffect();
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -106,7 +118,12 @@ private:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Battery", Meta = (AllowPrivateAccess = "true"))
 	float CollectionSphereRadius;
 
-	UPROPERTY(Replicated, VisibleAnywhere, Category = "Power")
+	
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentPower, VisibleAnywhere, Category = "Power")
 	float CurrentPower;
+
+	// Power level is updated on clients
+	UFUNCTION()
+	void OnRep_CurrentPower();
 };
 

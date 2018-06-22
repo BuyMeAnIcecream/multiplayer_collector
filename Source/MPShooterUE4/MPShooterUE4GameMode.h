@@ -20,16 +20,25 @@ public:
 	UFUNCTION(BlueprintPure, Category= "Power")
 	float GetDecayRate();
 
-	//how manye times per sec update character's power 
+	//access the power level required to win the game
+	UFUNCTION(BlueprintPure, Category = "Power")
+	float GetPowerToWin();
+
+protected:
+	//how many times per sec update character's power 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Power")
 	float PowerDrainDelay;
 
 	//Access the timer for recuring power drain
 	FTimerHandle PowerDrainTimer;
-protected:
+
 	//rate of powerloss (%initial power / sec)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
 	float DecayRate;
+
+	//the power level needed to win
+	UPROPERTY(BlueprintReadWrite, Category="Power")
+	float PowerToWin;
 
 private:
 
