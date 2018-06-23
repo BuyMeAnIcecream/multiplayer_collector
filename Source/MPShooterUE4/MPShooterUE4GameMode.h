@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "CollectorGameState.h"
 #include "MPShooterUE4GameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -22,7 +23,7 @@ public:
 
 	//access the power level required to win the game
 	UFUNCTION(BlueprintPure, Category = "Power")
-	float GetPowerToWin();
+	float GetPowerToWinMultiplier();
 
 protected:
 	//how many times per sec update character's power 
@@ -37,13 +38,23 @@ protected:
 	float DecayRate;
 
 	//the power level needed to win
-	UPROPERTY(BlueprintReadWrite, Category="Power")
-	float PowerToWin;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
+	float PowerToWinMultiplier;
+	
+	//track number of players who ran out of energy and were eliminated
+	int32 DeadPlayerCount;
+
 
 private:
 
 	//drain power here
 	void DrainPowerOverTime();
+
+	//stores all the spawn vols
+	TArray<class ASpawnVolume*> SpawnVolumeActors;
+
+	//handle any function calls for when the game transitions between states
+	void HandleNewState(EBatteryPlayState NewState);
 };
 
 

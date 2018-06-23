@@ -27,8 +27,7 @@ void ASpawnVolume::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SpawnDelay = FMath::FRandRange(SpawnDelayRangeLow, SpawnDelayRangeHigh);
-	GetWorldTimerManager().SetTimer(SpawnTimer, this, &ASpawnVolume::SpawnPickup, SpawnDelay, false);
+	
 }
 
 // Called every frame
@@ -48,6 +47,23 @@ FVector ASpawnVolume::GetRandomPointInVolume()
 	}
 	return FVector();
 	
+}
+
+void ASpawnVolume::SetSpawningActive(bool bShouldSpawn)
+{
+	if(Role == ROLE_Authority)
+		if (bShouldSpawn)
+		{
+			//start spawning
+			//set timer to start spawning pickups
+			SpawnDelay = FMath::FRandRange(SpawnDelayRangeLow, SpawnDelayRangeHigh);
+			GetWorldTimerManager().SetTimer(SpawnTimer, this, &ASpawnVolume::SpawnPickup, SpawnDelay, false);
+		}
+		else
+		{
+			//stop spawning
+			GetWorldTimerManager().ClearTimer(SpawnTimer);
+		}
 }
 
 void ASpawnVolume::SpawnPickup()
@@ -75,6 +91,7 @@ void ASpawnVolume::SpawnPickup()
 			SpawnDelay = FMath::FRandRange(SpawnDelayRangeLow, SpawnDelayRangeHigh);
 			GetWorldTimerManager().SetTimer(SpawnTimer, this, &ASpawnVolume::SpawnPickup, SpawnDelay, false);
 
+			SetSpawningActive(true);
 		}
 	}
 }
