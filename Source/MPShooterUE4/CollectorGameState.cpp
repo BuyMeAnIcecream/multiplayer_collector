@@ -15,6 +15,7 @@ void ACollectorGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 	DOREPLIFETIME(ACollectorGameState, PowerToWin);
 	DOREPLIFETIME(ACollectorGameState, CurrentState);
+	DOREPLIFETIME(ACollectorGameState, WinningPlayerName);
 }
 
 EBatteryPlayState ACollectorGameState::GetCurrentState()const
@@ -32,4 +33,12 @@ void ACollectorGameState::SetCurrentState(EBatteryPlayState NewState)
 void ACollectorGameState::OnRep_CurrentState()
 {
 
+}
+
+FText ACollectorGameState::GetVictoryEnumAsString(uint8 EnumValue)
+{
+	const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT("EVictoryEnum"), true);
+	if (!EnumPtr) return NSLOCTEXT("Invalid", "Invalid", "Invalid");
+
+	return EnumPtr->GetDisplayNameText(EnumValue);
 }

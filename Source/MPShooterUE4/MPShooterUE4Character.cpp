@@ -130,6 +130,34 @@ void AMPShooterUE4Character::UpdatePower(float DeltaPower)
 	}
 }
 
+void AMPShooterUE4Character::OnPlayerDeath_Implementation()
+{
+	//disconnect controller from Pawn
+	DetachFromControllerPendingDestroy();
+	if (GetMesh())
+	{
+		static FName CollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetCollisionProfileName(CollisionProfileName);
+	}
+
+	SetActorEnableCollision(true);
+
+	//ragdoll (init physics)
+	GetMesh()->SetAllBodiesSimulatePhysics(true);
+	GetMesh()->SetSimulatePhysics(true);
+	GetMesh()->WakeAllRigidBodies();
+	GetMesh()->bBlendPhysics = true;
+
+	//disable movment
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+
+	//disable collisions of the capsule
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+}
+
 void AMPShooterUE4Character::OnResetVR()
 {
 	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();

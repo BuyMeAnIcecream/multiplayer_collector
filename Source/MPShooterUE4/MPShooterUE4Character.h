@@ -50,8 +50,8 @@ public:
 	void UpdatePower(float DeltaPower);
 
 	//shutdown pawn and ragdoll it on all clients
-//	UFUNCTION(NetMulticast, Reliable)
-//	void OnPlayerDeath();
+	UFUNCTION(NetMulticast, Reliable)
+	void OnPlayerDeath();
 protected:
 
 	/** Resets HMD orientation in VR. */

@@ -5,6 +5,9 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
 #include "TimerManager.h"
+#include <EngineGlobals.h>
+#include <Runtime/Engine/Classes/Engine/Engine.h>
+
 
 // Sets default values
 ASpawnVolume::ASpawnVolume()
@@ -18,7 +21,7 @@ ASpawnVolume::ASpawnVolume()
 		RootComponent = WhereToSpawn;
 
 		SpawnDelayRangeLow = 1.0f;
-		SpawnDelayRangeHigh = 4.5f; 
+		SpawnDelayRangeHigh = 4.5f;
 	}
 }
 
@@ -51,7 +54,10 @@ FVector ASpawnVolume::GetRandomPointInVolume()
 
 void ASpawnVolume::SetSpawningActive(bool bShouldSpawn)
 {
+//	UE_LOG(LogTemp, Warning, TEXT("Bool value is: %s"), bShouldSpawn ? TEXT("true") : TEXT("false"));
+//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 	if(Role == ROLE_Authority)
+		
 		if (bShouldSpawn)
 		{
 			//start spawning

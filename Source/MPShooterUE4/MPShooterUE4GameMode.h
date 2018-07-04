@@ -16,12 +16,11 @@ public:
 	AMPShooterUE4GameMode();
 
 	virtual void BeginPlay() override;
-
-	//decay rate getter
+	//Decay rate getter
 	UFUNCTION(BlueprintPure, Category= "Power")
 	float GetDecayRate();
 
-	//access the power level required to win the game
+	//Access the power level required to win the game
 	UFUNCTION(BlueprintPure, Category = "Power")
 	float GetPowerToWinMultiplier();
 
@@ -33,28 +32,33 @@ protected:
 	//Access the timer for recuring power drain
 	FTimerHandle PowerDrainTimer;
 
-	//rate of powerloss (%initial power / sec)
+	//Rate of powerloss (%initial power / sec)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
 	float DecayRate;
 
-	//the power level needed to win
+	//The power level needed to win
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
 	float PowerToWinMultiplier;
 	
-	//track number of players who ran out of energy and were eliminated
+	//Track number of players who ran out of energy and were eliminated
 	int32 DeadPlayerCount;
 
+	//To communicate with games GameState
+	ACollectorGameState* MyGameState;
 
 private:
 
-	//drain power here
+	//Drain power here
 	void DrainPowerOverTime();
 
-	//stores all the spawn vols
+	//Stores all the spawn vols
 	TArray<class ASpawnVolume*> SpawnVolumeActors;
 
-	//handle any function calls for when the game transitions between states
+	//Handle any function calls for when the game transitions between states
 	void HandleNewState(EBatteryPlayState NewState);
+
+	//Debug
+	void Log();
 };
 
 

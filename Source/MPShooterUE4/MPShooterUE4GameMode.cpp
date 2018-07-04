@@ -3,7 +3,7 @@
 #include "MPShooterUE4GameMode.h"
 #include "MPShooterUE4Character.h"
 #include "GameFramework/HUD.h"
-
+#include "string"
 #include "Kismet/GameplayStatics.h"
 //#include "Runtime/Engine/Classes/GameFramework/Actor.h"
 //#include "Runtime/Engine/Classes/Engine/World.h"
@@ -44,13 +44,15 @@ AMPShooterUE4GameMode::AMPShooterUE4GameMode()
 	DeadPlayerCount = 0;
 }
 
+
 void AMPShooterUE4GameMode::BeginPlay()
 {
-	GetWorldTimerManager().SetTimer(PowerDrainTimer, this, &AMPShooterUE4GameMode::DrainPowerOverTime, PowerDrainDelay, true);
+	Super::BeginPlay();
+	
 
 	UWorld* World = GetWorld();
 	check(World);
-	ACollectorGameState* MyGameState = Cast<ACollectorGameState>(GameState);
+	MyGameState = Cast<ACollectorGameState>(GameState);
 	check(MyGameState);
 
 	//reset stats
@@ -60,8 +62,7 @@ void AMPShooterUE4GameMode::BeginPlay()
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(World, ASpawnVolume::StaticClass(), FoundActors);
 
-	//transitioning the game to the playing state
-	HandleNewState(EBatteryPlayState::EPlaying);;
+	
 	for (auto Actor:FoundActors)
 	{
 		if (ASpawnVolume* TestSpawnVol = Cast<ASpawnVolume>(Actor))
@@ -81,9 +82,16 @@ void AMPShooterUE4GameMode::BeginPlay()
 			}
 		}
 	}
+
+	//timer for debuggin logs
+//	FTimerHandle DebugLogTimer;
+//	GetWorldTimerManager().SetTimer(DebugLogTimer, this, &AMPShooterUE4GameMode::Log, 5.0f, true);
+
+	//transitioning the game to the playing state
+	HandleNewState(EBatteryPlayState::EPlaying);
 }
 
-
+//debug_print from loop
 float AMPShooterUE4GameMode::GetDecayRate()
 {
 	return DecayRate;
@@ -96,6 +104,7 @@ float AMPShooterUE4GameMode::GetPowerToWinMultiplier()
 
 void AMPShooterUE4GameMode::DrainPowerOverTime() 
 {
+	
 	//Access world to get to players
 	UWorld* World = GetWorld();
 	check(World);
@@ -112,6 +121,7 @@ void AMPShooterUE4GameMode::DrainPowerOverTime()
 			{
 				if (BatteryCharacter->GetCurrentPower() > MyGameState->PowerToWin)
 				{
+					MyGameState->WinningPlayerName = BatteryCharacter->GetName();
 					HandleNewState(EBatteryPlayState::EWon);
 					//MyGameState->SetCurrentState(EBatteryPlayState::EWon);
 				}
@@ -123,11 +133,11 @@ void AMPShooterUE4GameMode::DrainPowerOverTime()
 				else
 				{
 					//dude you dead
-					BatteryCharacter->DetachFromControllerPendingDestroy();
+					BatteryCharacter->OnPlayerDeath();
 					++DeadPlayerCount;
 					
 					//see if this is the last player to die.
-					if (DeadPlayerCount >= GetNumPlayers() - 1)
+					if (DeadPlayerCount >= GetNumPlayers())
 					{
 						MyGameState->SetCurrentState(EBatteryPlayState::EGameOver);
 					//	GetNumPlayers
@@ -150,7 +160,7 @@ void AMPShooterUE4GameMode::HandleNewState(EBatteryPlayState NewState)
 	if (NewState != MyGameState->GetCurrentState())
 	{
 		MyGameState->SetCurrentState(NewState);
-
+//		UE_LOG(LogTemp, Warning, TEXT("UseEnumValue as string : %s"), *GETENUMSTRING("EBatteryPlayState", MyGameState->GetCurrentState()));
 		switch (NewState)
 		{
 		case EBatteryPlayState::EPlaying:
@@ -158,13 +168,21 @@ void AMPShooterUE4GameMode::HandleNewState(EBatteryPlayState NewState)
 			{
 				SpawnVol->SetSpawningActive(true);
 			}
+			//Start draining power
+			GetWorldTimerManager().SetTimer(PowerDrainTimer, this, &AMPShooterUE4GameMode::DrainPowerOverTime, PowerDrainDelay, true);
+//			UE_LOG(LogTemp, Warning, TEXT("Playin"));
 			break;
 
 		case EBatteryPlayState::EGameOver:
 			for (ASpawnVolume* SpawnVol : SpawnVolumeActors)
 			{
-				SpawnVol->SetSpawningActive(true);
+				SpawnVol->SetSpawningActive(false);
+
 			}
+			//stop draining power
+			GetWorldTimerManager().ClearTimer(PowerDrainTimer);
+
+//			UE_LOG(LogTemp, Warning, TEXT("Over"));
 			break;
 
 		case EBatteryPlayState::EWon:
@@ -172,6 +190,7 @@ void AMPShooterUE4GameMode::HandleNewState(EBatteryPlayState NewState)
 			{
 				SpawnVol->SetSpawningActive(false);
 			}
+//			UE_LOG(LogTemp, Warning, TEXT("Won"));
 			break;
 
 		default:
@@ -182,3 +201,14 @@ void AMPShooterUE4GameMode::HandleNewState(EBatteryPlayState NewState)
 	}
 
 }
+
+
+void AMPShooterUE4GameMode::Log()
+{
+	//std::string 
+	int val = MyGameState->GetCurrentState();
+	//
+	//std::string str = "State: " + std::to_string(val);//FString::FromInt(val);
+	UE_LOG(LogTemp, Warning, TEXT("State: %d"), val);
+}
+

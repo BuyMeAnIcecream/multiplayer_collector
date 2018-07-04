@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "EngineMinimal.h"
 #include "GameFramework/GameStateBase.h"
 #include "CollectorGameState.generated.h"
 
@@ -22,8 +22,8 @@ UCLASS()
 class MPSHOOTERUE4_API ACollectorGameState : public AGameStateBase
 {
 	GENERATED_BODY()
-	
-	
+
+
 public:
 	ACollectorGameState();
 
@@ -42,8 +42,14 @@ public:
 
 	//Rep Notify fired on clients to allow for client-side changes in gameplay state
 	UFUNCTION()
-	void OnRep_CurrentState();
+		void OnRep_CurrentState();
+
+	//The name of winner
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Power")
+	FString WinningPlayerName;
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentState)
 	TEnumAsByte<enum EBatteryPlayState> CurrentState;
+
+	FText GetVictoryEnumAsString(uint8 EnumValue);
 };
