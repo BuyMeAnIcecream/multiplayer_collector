@@ -2,7 +2,10 @@
 
 #include "Banana.h"
 
-ABanana::ABanana() 
+
+
+
+ABanana::ABanana()
 {
 	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = false;
@@ -12,8 +15,12 @@ ABanana::ABanana()
 	bReplicateMovement = true;
 	GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
 	GetStaticMeshComponent()->SetSimulatePhysics(true);
-
+	
+	if (Role == ROLE_Authority) {
+		bIsActive = true;
+	}
 }
+
 
 void ABanana::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -22,13 +29,20 @@ void ABanana::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	DOREPLIFETIME(ABanana, bIsActive);
 }
 
-void ABanana::KnockOut_Implementation()
+bool ABanana::IsActive()
 {
-	//TODO add implementation in 3rdCharacter
-
-	UE_LOG(LogClass, Log, TEXT("APickup::WasCollected_Implementation() %s"), *GetName());
-}
-
-bool ABanana::IsActive() {
 	return bIsActive;
 }
+
+void ABanana::SetActive(bool NewActive) {
+	if (Role == ROLE_Authority)
+	{
+		bIsActive = NewActive;
+	}
+}
+
+void ABanana::OnRep_IsActive()
+{
+
+}
+

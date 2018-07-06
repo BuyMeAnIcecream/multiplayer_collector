@@ -3,7 +3,7 @@
 #pragma once
 
 
-#include "CoreMinimal.h"
+#include "Engine.h"
 #include "GameFramework/Character.h"
 #include "MPShooterUE4Character.generated.h"
 
@@ -25,6 +25,8 @@ class AMPShooterUE4Character : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Battery, meta = (AllowPrivateAccess = "true"))
 	class USphereComponent* CollectionSphere;
 public:
+	virtual void BeginPlay() override;
+
 	AMPShooterUE4Character();
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -52,6 +54,20 @@ public:
 	//shutdown pawn and ragdoll it on all clients
 	UFUNCTION(NetMulticast, Reliable)
 	void OnPlayerDeath();
+
+	//Getting knocked out
+	UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+	void OnKnockedOut();
+
+	//Start recovering from KO
+	void InitiateRecovery();
+	
+	//Start lerping skeletal mesh back to capsule
+	void LerpMesh();
+
+	//Finish the recovery from KO
+	void FinishRecovery();
+	
 protected:
 
 	/** Resets HMD orientation in VR. */
@@ -109,7 +125,6 @@ protected:
 	//update character visuals based on current power level
 	UFUNCTION(BlueprintImplementableEvent, Category = "Power")
 	void PowerChangeEffect();
-
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -128,5 +143,32 @@ private:
 	// Power level is updated on clients
 	UFUNCTION()
 	void OnRep_CurrentPower();
-};
 
+	//Relative location and rotation saved for returning mesh into sphere
+	FVector InitRelativeLocation;
+	FQuat InitRelativeRotation;
+
+	//World location before getting knocked out
+	FVector BeforeRecoverWorldLocation;
+	FQuat BeforeRecoverWorldRotation;
+
+	//Relative location and rotation after KO
+	FVector KOWorldLocation;
+	FQuat KOWorldRotation;
+
+	//Timer to start recovery
+	FTimerHandle KnockOutRecoveryTimer;
+
+	//Timer to update lerp
+	FTimerHandle MeshLerpTimer;
+
+	//Lerp skeletal mesh back to capsule
+	float MeshLerpAlpha;
+	
+	//Pelvis name
+//	const FName Pelvis(TEXT("Pelvis"));
+	
+	//Time spent in Knock Out
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Battery", Meta = (AllowPrivateAccess = "true"))
+	float KOTime;
+};

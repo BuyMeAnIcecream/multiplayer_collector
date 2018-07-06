@@ -9,8 +9,10 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/SphereComponent.h"
+#include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "BatteryPickup.h"
+
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterUE4Character
 
@@ -64,6 +66,25 @@ AMPShooterUE4Character::AMPShooterUE4Character()
 	//base values for controlling movement speed
 	BaseSpeed = 10.0f; //epic's default
 	SpeedFactor = 0.75f;
+
+	//Initial alhpa val
+	MeshLerpAlpha = 1.0f;
+
+	//Base value for KOTime
+	KOTime = 2.0f;
+}
+
+const FName Pelvis(TEXT("Pelvis"));
+
+void AMPShooterUE4Character::BeginPlay()
+{
+	Super::BeginPlay();
+
+	//Saving initial loc and rot
+	if (GetMesh()) {
+		InitRelativeLocation = GetMesh()->GetRelativeTransform().GetLocation();
+	    InitRelativeRotation = GetMesh()->GetRelativeTransform().GetRotation();
+	}
 }
 
 void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -72,6 +93,7 @@ void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(AMPShooterUE4Character, CollectionSphereRadius);
 	DOREPLIFETIME(AMPShooterUE4Character, InitialPower);
 	DOREPLIFETIME(AMPShooterUE4Character, CurrentPower);
+	DOREPLIFETIME(AMPShooterUE4Character, KOTime);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -156,6 +178,136 @@ void AMPShooterUE4Character::OnPlayerDeath_Implementation()
 	//disable collisions of the capsule
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+}
+
+void AMPShooterUE4Character::OnKnockedOut_Implementation()
+{	
+	
+//	if (GEngine)
+//		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("KnockedOut!"));
+	if (GetMesh())
+	{
+		static FName CollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetCollisionProfileName(CollisionProfileName);
+	}
+
+	//
+	BeforeRecoverWorldLocation = GetMesh()->GetComponentLocation();
+	BeforeRecoverWorldRotation = GetMesh()->GetComponentQuat();
+
+	SetActorEnableCollision(true);
+
+	//ragdoll (init physics)
+	
+	GetMesh()->SetAllBodiesBelowSimulatePhysics(Pelvis, true);
+//	GetMesh()->SetAllBodiesSimulatePhysics(true);
+	GetMesh()->SetSimulatePhysics(true);
+
+	GetMesh()->WakeAllRigidBodies();
+	GetMesh()->bBlendPhysics = true;
+	//disable movement
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+
+	//disable collisions of the capsule
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	
+	//Start recovering in KOTime
+	GetWorldTimerManager().SetTimer(KnockOutRecoveryTimer, this, &AMPShooterUE4Character::InitiateRecovery, KOTime, false);
+}
+
+
+
+void AMPShooterUE4Character::InitiateRecovery()
+{
+	
+
+	//Reset Alpha to 1
+	MeshLerpAlpha = 1.0f;
+
+//	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
+
+	//Save loc and rot of a mesh before recovery to lerp through
+	KOWorldLocation = GetMesh()->GetComponentLocation();
+	KOWorldRotation = GetMesh()->GetComponentQuat();
+
+	//Start the lerping process
+	GetWorldTimerManager().SetTimer(MeshLerpTimer, this, &AMPShooterUE4Character::LerpMesh, 0.005f, true);
+
+	//Clear the timer from delayed recovery delegate
+	GetWorldTimerManager().ClearTimer(KnockOutRecoveryTimer);
+/*	
+	if (Role == ROLE_Authority) {
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("KOWorldLoc: " + KOWorldLocation.ToString()));
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("BeforeRecWorldLoc: " + BeforeRecoverWorldLocation.ToString()));
+		}
+	}
+*/
+}
+
+void AMPShooterUE4Character::LerpMesh()
+{
+	//Increment Alpha every time function is called in timer loop
+	MeshLerpAlpha -= 0.01;
+
+	if (MeshLerpAlpha <= 0.0f)
+	{
+		//Clear the timer once lerp is done
+		GetWorldTimerManager().ClearTimer(MeshLerpTimer);
+
+		//Trigger final actions to finish recovery
+		AMPShooterUE4Character::FinishRecovery();
+	}
+	else
+	{
+		GetMesh()->SetAllBodiesBelowPhysicsBlendWeight(Pelvis, MeshLerpAlpha);
+		/*
+		FHitResult* OutSweepHitResult = new FHitResult;
+		GetMesh()->SetWorldLocationAndRotation(
+			FMath::Lerp(KOWorldLocation, BeforeRecoverWorldLocation, MeshLerpAlpha),
+			FMath::Lerp(KOWorldRotation, BeforeRecoverWorldRotation, MeshLerpAlpha),
+			false,
+			OutSweepHitResult,
+			ETeleportType::TeleportPhysics);
+			*/
+			
+//		GetMesh()->SetRelativeLocation(FMath::Lerp(KORelLocation, InitRelLocation, MeshLerpAlpha));
+//		GetMesh()->SetRelativeRotation(FMath::Lerp(KORelRotation, InitRelRotation, MeshLerpAlpha));
+	}
+
+}
+
+void AMPShooterUE4Character::FinishRecovery()
+{
+
+
+	//Ragdoll (init physics) off
+	GetMesh()->SetAllBodiesSimulatePhysics(false);
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->bBlendPhysics = false;
+
+	//Turn off skeleton mesh collision once finished recovering
+	if (GetMesh())
+	{
+		static FName CollisionProfileName(TEXT("CharacterMesh"));
+		GetMesh()->SetCollisionProfileName(CollisionProfileName);
+	}
+	SetActorEnableCollision(true);
+
+	//Set loc and rot to init just to be sure
+//	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+//	GetMesh()->SetRelativeLocationAndRotation(InitRelativeLocation, InitRelativeRotation, false);
+
+
+	//Enable movement
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+	//Enable collisions of the capsule
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Block);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECR_Ignore);
 }
 
 void AMPShooterUE4Character::OnResetVR()

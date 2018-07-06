@@ -22,7 +22,7 @@ public:
 	bool IsActive();
 
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
-	void SetActive(bool newPickupState);
+	void SetActive(bool NewPickupState);
 
 	//Required network scuffolding
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
