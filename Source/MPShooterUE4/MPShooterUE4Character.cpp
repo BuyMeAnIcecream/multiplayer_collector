@@ -12,6 +12,7 @@
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "BatteryPickup.h"
+#include <string>
 
 //////////////////////////////////////////////////////////////////////////
 // AMPShooterUE4Character
@@ -52,9 +53,9 @@ AMPShooterUE4Character::AMPShooterUE4Character()
 
     // Create a Collection Sphere
 	CollectionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphere"));
-	CollectionSphere->AttachToComponent(RootComponent,FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+//	CollectionSphere->AttachToComponent(RootComponent,FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	CollectionSphere->SetSphereRadius(CollectionSphereRadius);
-	
+//	CollectionSphere->SetupAttachment(GetMesh());
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -85,6 +86,7 @@ void AMPShooterUE4Character::BeginPlay()
 		InitRelativeLocation = GetMesh()->GetRelativeTransform().GetLocation();
 	    InitRelativeRotation = GetMesh()->GetRelativeTransform().GetRotation();
 	}
+	
 }
 
 void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -126,6 +128,12 @@ PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMPShooterUE4Char
 
 //handle pickups
 PlayerInputComponent->BindAction("CollectPickups", IE_Pressed, this, &AMPShooterUE4Character::CollectPickups);
+
+//handle banana attack
+PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMPShooterUE4Character::Attack);
+
+//handle hiding
+PlayerInputComponent->BindAction("Hide", IE_Pressed, this, &AMPShooterUE4Character::Hide);
 }
 
 
@@ -144,9 +152,14 @@ void AMPShooterUE4Character::UpdatePower(float DeltaPower)
 	if (Role == ROLE_Authority)
 	{
 		CurrentPower += DeltaPower;
+
+		//don't modify the speed if it's low enough
+		if (CurrentPower < 600)		
+			return;
+		
 		//set movement speed based on power level
 		GetCharacterMovement()->MaxWalkSpeed = BaseSpeed + SpeedFactor * CurrentPower;
-
+		
 		//fake the rep notify (listen server doesn't get the repnotify automatically
 		OnRep_CurrentPower();
 	}
@@ -366,10 +379,64 @@ void AMPShooterUE4Character::MoveRight(float Value)
 	}
 }
 
+void AMPShooterUE4Character::Hide()
+{
+	//Ask server to hide player
+	ServerHide();
+}
+
+void AMPShooterUE4Character::ServerHide_Implementation()
+{
+	if (Role == ROLE_Authority)
+	{
+		//Array of nearby hidable meshes
+		TArray<AActor*> CollectedActors;
+		//Shortest distance to hidable
+		float Shortest = 1000;
+		AHidableMesh* Nearest = NULL;
+		//Get overlapping actors
+		CollectionSphere->GetOverlappingActors(CollectedActors);
+		//check if they are hidable
+		for (int i = 0; i < CollectedActors.Num(); i++)
+		{
+			AHidableMesh* const TestHidMesh = Cast<AHidableMesh>(CollectedActors[i]);
+			if (TestHidMesh != NULL && !TestHidMesh->IsPendingKill() && !TestHidMesh->ContainsPlayer())
+			{
+				//Vector between two points
+				FVector VectBtw = GetActorLocation() - TestHidMesh->GetActorLocation();
+				//Get distance 
+				if (i == 0 || VectBtw.Size() < Shortest)
+				{
+					Nearest = TestHidMesh;
+					Shortest = VectBtw.Size();
+				}
+			}
+		}
+
+		if (Nearest)
+		{
+			Nearest->HidePlayer(this);
+		}
+
+
+
+	}
+}
+
+bool AMPShooterUE4Character::ServerHide_Validate()
+{
+	return true;
+}
+
 void AMPShooterUE4Character::CollectPickups()
 {
 	//ask server to collect dat
 	ServerCollectPickups();
+}
+
+void AMPShooterUE4Character::Attack()
+{
+	//shoot a banana
 }
 
 void AMPShooterUE4Character::OnRep_CurrentPower()

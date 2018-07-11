@@ -5,6 +5,7 @@
 
 #include "Engine.h"
 #include "GameFramework/Character.h"
+#include "HidableMesh.h"
 #include "MPShooterUE4Character.generated.h"
 
 
@@ -102,13 +103,25 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	//Called on key hide pressed
+	UFUNCTION(BlueprintCallable, Category = "Hide")
+	void Hide();
+
 	//called on key collect pressed
 	UFUNCTION(BlueprintCallable, Category = "Pickups")
 	void CollectPickups();
 
+	//Called on attack key pressed
+	UFUNCTION(BlueprintCallable, Category = "Attack")
+	void Attack();
+
 	//process collection on serv
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerCollectPickups();
+
+	//process hiding on serv
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerHide();
 
 	//starting pwrlevel
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Power", Meta = (BlueprintProtected = "true"))
@@ -125,6 +138,10 @@ protected:
 	//update character visuals based on current power level
 	UFUNCTION(BlueprintImplementableEvent, Category = "Power")
 	void PowerChangeEffect();
+
+
+	//TIMELINE FUNCTIONALITY
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/RotatingMovementComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "Net/UnrealNetwork.h"
 #include "Banana.generated.h"
@@ -27,7 +29,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Banana")
 	void SetActive(bool NewActive);
 
+	
 protected:
+	//Rotating movement component
+	UPROPERTY()
+	URotatingMovementComponent* RotMovComp;
+
+	//Movement component
+	UPROPERTY()
+	UProjectileMovementComponent* MovComp;
+	
 	//can be used
 	UPROPERTY(ReplicatedUsing = OnRep_IsActive)
 	bool bIsActive;

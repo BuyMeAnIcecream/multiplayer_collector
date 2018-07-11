@@ -19,6 +19,11 @@ ABanana::ABanana()
 	if (Role == ROLE_Authority) {
 		bIsActive = true;
 	}
+
+	//add movement and rotation components
+	MovComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Movement"));
+	RotMovComp = CreateDefaultSubobject<URotatingMovementComponent>(TEXT("RotatingMovement"));
+
 }
 
 

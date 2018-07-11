@@ -34,7 +34,7 @@ void ACollectorGameState::OnRep_CurrentState()
 {
 
 }
-
+/*
 FText ACollectorGameState::GetVictoryEnumAsString(uint8 EnumValue)
 {
 	const UEnum* EnumPtr = FindObject<UEnum>(ANY_PACKAGE, TEXT("EVictoryEnum"), true);
@@ -42,3 +42,4 @@ FText ACollectorGameState::GetVictoryEnumAsString(uint8 EnumValue)
 
 	return EnumPtr->GetDisplayNameText(EnumValue);
 }
+*/

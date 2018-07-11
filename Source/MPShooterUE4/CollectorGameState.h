@@ -51,5 +51,5 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentState)
 	TEnumAsByte<enum EBatteryPlayState> CurrentState;
 
-	FText GetVictoryEnumAsString(uint8 EnumValue);
+//	FText GetVictoryEnumAsString(uint8 EnumValue);
 };
