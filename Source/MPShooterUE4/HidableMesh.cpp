@@ -2,15 +2,16 @@
 
 #include "HidableMesh.h"
 #include "Runtime/Engine/Public/EngineGlobals.h"
-
+#include "Components/StaticMeshComponent.h"
 
 
 
 AHidableMesh::AHidableMesh()
 {
+	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = false;
-	GetStaticMeshComponent()->bGenerateOverlapEvents = true;
+	StaticMeshComponent->bGenerateOverlapEvents = true;
 
 	//Set up collision to block characters by default
 
@@ -19,13 +20,14 @@ AHidableMesh::AHidableMesh()
 	}
 }
 
-
+/*
 void AHidableMesh::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AHidableMesh, bContainsPlayer);
 }
+*/
 
 bool AHidableMesh::ContainsPlayer()
 {
@@ -44,6 +46,8 @@ void AHidableMesh::HidePlayer(APawn * Pawn)
 	//Set contains player true
 	if (Role == ROLE_Authority)
 	{
+		//Allow ragdoll to penetrate
+//		StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Ignore);
 		SetContainsPlayer(true);
 /*		if (GEngine) {
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, Pawn->GetName());

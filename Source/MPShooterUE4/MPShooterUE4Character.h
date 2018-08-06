@@ -141,7 +141,22 @@ protected:
 
 
 	//TIMELINE FUNCTIONALITY
+	UPROPERTY()
+	UTimelineComponent* MyTimeline;
 
+	UPROPERTY()
+	UCurveFloat* ShrinkCurve;
+
+	UFUNCTION()
+	void TimelineCallback(float val);
+
+	UFUNCTION()
+	void TimelineFinishedCallback();
+
+	void PlayTimeline();
+
+	UPROPERTY()
+	TEnumAsByte<ETimelineDirection::Type> TimelineDirection;
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

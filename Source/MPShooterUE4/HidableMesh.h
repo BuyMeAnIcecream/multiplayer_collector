@@ -5,21 +5,26 @@
 #include "CoreMinimal.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/StaticMeshActor.h"
+#include "GameFramework/Pawn.h"
 #include "HidableMesh.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class MPSHOOTERUE4_API AHidableMesh : public AStaticMeshActor
+class MPSHOOTERUE4_API AHidableMesh : public APawn
 {
 	GENERATED_BODY()
 	
 public:
+	
 	//set default vals to instance of a class
 	AHidableMesh();
 	
-	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//Adding mesh component
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"), Category = "Mesh")
+	UStaticMeshComponent* StaticMeshComponent;
+//	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintPure, Category = "HidableMesh")
 	bool ContainsPlayer();

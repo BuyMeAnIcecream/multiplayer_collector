@@ -12,6 +12,7 @@
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "BatteryPickup.h"
+#include "Possessable.h"
 #include <string>
 
 //////////////////////////////////////////////////////////////////////////
@@ -73,20 +74,67 @@ AMPShooterUE4Character::AMPShooterUE4Character()
 
 	//Base value for KOTime
 	KOTime = 2.0f;
+
+	//Load Shrink Curve
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Timelines/fShrinkCurve"));
+	check(Curve.Succeeded());
+
+	ShrinkCurve = Curve.Object;
 }
 
 const FName Pelvis(TEXT("Pelvis"));
 
 void AMPShooterUE4Character::BeginPlay()
 {
+	//Timeline callback 
+	FOnTimelineFloat onTimelineCallback;
+	FOnTimelineEventStatic onTimelineFinishedCallback;
+
 	Super::BeginPlay();
 
-	//Saving initial loc and rot
-	if (GetMesh()) {
-		InitRelativeLocation = GetMesh()->GetRelativeTransform().GetLocation();
-	    InitRelativeRotation = GetMesh()->GetRelativeTransform().GetRotation();
+	if (ShrinkCurve != NULL)
+	{
+		MyTimeline = NewObject<UTimelineComponent>(this, FName("TimelineAnimation"));
+		MyTimeline->CreationMethod = EComponentCreationMethod::UserConstructionScript; // Indicate it comes from a blueprint so it gets cleared when we rerun construction scripts
+		this->BlueprintCreatedComponents.Add(MyTimeline); // Add to array so it gets saved
+		MyTimeline->SetNetAddressable();	// This component has a stable name that can be referenced for replication
+
+		MyTimeline->SetPropertySetObject(this); // Set which object the timeline should drive properties on
+		MyTimeline->SetDirectionPropertyName(FName("TimelineDirection"));
+
+		MyTimeline->SetLooping(false);
+		MyTimeline->SetTimelineLength(5.0f);
+		MyTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+
+		MyTimeline->SetPlaybackPosition(0.0f, false);
+
+		//Add the float curve to the timeline and connect it to your timelines's interpolation function
+		onTimelineCallback.BindUFunction(this, FName{ TEXT("TimelineCallback") });
+		onTimelineFinishedCallback.BindUFunction(this, FName{ TEXT("TimelineFinishedCallback") });
+		MyTimeline->AddInterpFloat(ShrinkCurve, onTimelineCallback);
+		MyTimeline->SetTimelineFinishedFunc(onTimelineFinishedCallback);
+
+		MyTimeline->RegisterComponent();
 	}
 	
+}
+
+void AMPShooterUE4Character::TimelineCallback(float interpolatedVal)
+{
+	// This function is called for every tick in the timeline.
+}
+
+void AMPShooterUE4Character::TimelineFinishedCallback()
+{
+	// This function is called when the timeline finishes playing.
+}
+
+void AMPShooterUE4Character::PlayTimeline()
+{
+	if (MyTimeline != NULL)
+	{
+		MyTimeline->PlayFromStart();
+	}
 }
 
 void AMPShooterUE4Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -239,8 +287,6 @@ void AMPShooterUE4Character::InitiateRecovery()
 	//Reset Alpha to 1
 	MeshLerpAlpha = 1.0f;
 
-//	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
-
 	//Save loc and rot of a mesh before recovery to lerp through
 	KOWorldLocation = GetMesh()->GetComponentLocation();
 	KOWorldRotation = GetMesh()->GetComponentQuat();
@@ -276,18 +322,6 @@ void AMPShooterUE4Character::LerpMesh()
 	else
 	{
 		GetMesh()->SetAllBodiesBelowPhysicsBlendWeight(Pelvis, MeshLerpAlpha);
-		/*
-		FHitResult* OutSweepHitResult = new FHitResult;
-		GetMesh()->SetWorldLocationAndRotation(
-			FMath::Lerp(KOWorldLocation, BeforeRecoverWorldLocation, MeshLerpAlpha),
-			FMath::Lerp(KOWorldRotation, BeforeRecoverWorldRotation, MeshLerpAlpha),
-			false,
-			OutSweepHitResult,
-			ETeleportType::TeleportPhysics);
-			*/
-			
-//		GetMesh()->SetRelativeLocation(FMath::Lerp(KORelLocation, InitRelLocation, MeshLerpAlpha));
-//		GetMesh()->SetRelativeRotation(FMath::Lerp(KORelRotation, InitRelRotation, MeshLerpAlpha));
 	}
 
 }
@@ -308,11 +342,6 @@ void AMPShooterUE4Character::FinishRecovery()
 		GetMesh()->SetCollisionProfileName(CollisionProfileName);
 	}
 	SetActorEnableCollision(true);
-
-	//Set loc and rot to init just to be sure
-//	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-//	GetMesh()->SetRelativeLocationAndRotation(InitRelativeLocation, InitRelativeRotation, false);
-
 
 	//Enable movement
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
@@ -393,13 +422,13 @@ void AMPShooterUE4Character::ServerHide_Implementation()
 		TArray<AActor*> CollectedActors;
 		//Shortest distance to hidable
 		float Shortest = 1000;
-		AHidableMesh* Nearest = NULL;
+		APossessable* Nearest = NULL;
 		//Get overlapping actors
 		CollectionSphere->GetOverlappingActors(CollectedActors);
 		//check if they are hidable
 		for (int i = 0; i < CollectedActors.Num(); i++)
 		{
-			AHidableMesh* const TestHidMesh = Cast<AHidableMesh>(CollectedActors[i]);
+			APossessable* const TestHidMesh = Cast<APossessable>(CollectedActors[i]);
 			if (TestHidMesh != NULL && !TestHidMesh->IsPendingKill() && !TestHidMesh->ContainsPlayer())
 			{
 				//Vector between two points
@@ -413,12 +442,37 @@ void AMPShooterUE4Character::ServerHide_Implementation()
 			}
 		}
 
+		//Check if nearest unpossessed exists
 		if (Nearest)
 		{
-			Nearest->HidePlayer(this);
+			Nearest->HidePlayer(this, FollowCamera->GetComponentTransform());
+			//disable collisions of the capsule
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+			SetActorEnableCollision(false);
+			
+			//Move into (preferably, use same timeline)
+
+			//disable movment
+			GetCharacterMovement()->StopMovementImmediately();
+			GetCharacterMovement()->DisableMovement();
+			GetCharacterMovement()->SetComponentTickEnabled(false);
+
+			//SetActorLocation(Nearest->GetActorLocation());
+			
+			APlayerController* Controller = Cast<APlayerController>(GetController());
+			if (GEngine) {
+				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("controller: " + Controller->GetName()));
+			}
+			if (Controller) 
+			{
+				Controller->UnPossess();
+				//ACharacter* character = GetWorld()->SpawnActor...
+				Controller->Possess(Nearest);
+			}
 		}
 
-
+		
 
 	}
 }
